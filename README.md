@@ -1,59 +1,96 @@
-# LibrarySystem
+# Library System
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.20.
+Angular 21 application for managing a library workflow, including authentication, book browsing, borrow/request flows, and notifications.
 
-## Development server
+## Overview
 
-To start a local development server, run:
+This frontend connects to a backend API and SignalR notification hub through a local proxy. The app is organized around a few primary features:
 
-```bash
-ng serve
-```
+- `books` for catalog browsing and item discovery
+- `requests` for user/library request workflows
+- `notifications` for live updates and activity alerts
+- auth pages for login, forgot password, and reset password flows
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## Tech stack
 
-## Code scaffolding
+- Angular 21
+- TypeScript
+- RxJS
+- SignalR client for real-time notifications
+- Vitest via Angular test runner
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## Prerequisites
 
-```bash
-ng generate component component-name
-```
+Before running the app locally, make sure you have:
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+- Node.js 20+ and npm
+- A working backend service running at `https://localhost:7060`
+- The app gateway configured as expected by the environment files in `src/environments/`
 
-```bash
-ng generate --help
-```
+## Getting started
 
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+Install dependencies:
 
 ```bash
-ng test
+npm install
 ```
 
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
+Start the dev server:
 
 ```bash
-ng e2e
+npm start
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+Then open:
 
-## Additional Resources
+```text
+http://localhost:4200
+```
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+The Angular dev server will run with the proxy configuration in `proxy.conf.json`, which forwards `/api` and `/hubs` traffic to the backend.
+
+## Available scripts
+
+```bash
+npm start      # starts the Angular dev server
+npm run build  # production build
+npm run watch  # development watch build
+npm test       # runs the unit tests
+```
+
+## Application routes
+
+- `/login`
+- `/forgot-password`
+- `/reset-password`
+- `/books`
+- `/requests`
+- `/notifications`
+
+The app redirects the root path to `/books` and falls back to `/books` for unmatched routes.
+
+## Project notes
+
+- API and realtime hub requests are proxied through `proxy.conf.json`
+- Environment-specific URLs are defined in `src/environments/environment.ts`
+- The project uses Angular standalone components and lazy-loaded feature routes
+
+## Testing
+
+Run the test suite with:
+
+```bash
+npm test
+```
+
+If you are using the backend or gateway locally, make sure it is running before testing flows that depend on API data or notifications.
+
+## Contributing
+
+Use the standard Angular CLI commands for feature generation when adding new components or routes, for example:
+
+```bash
+npx ng generate component component-name
+```
+
+More details are available in the Angular CLI documentation.
