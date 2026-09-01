@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',system-ui,sans-serif; }
+  body { background:#fff; }
+  #diagram { width:1600px; height:820px; background:linear-gradient(160deg,#f8fafc,#eef2ff); padding:48px; }
+  h1 { font-size:30px; color:#0f172a; margin-bottom:6px; }
+  .sub { color:#64748b; font-size:17px; margin-bottom:30px; }
+  .flow { display:flex; align-items:center; justify-content:center; gap:0; flex-wrap:wrap; }
+  .box { background:#fff; border:2px solid #c7d2fe; border-radius:14px; padding:18px 20px; width:225px; text-align:center;
+         box-shadow:0 2px 8px rgba(79,70,229,.08); min-height:120px; display:flex; flex-direction:column; justify-content:center; }
+  .box .ic { font-size:26px; }
+  .box .t { font-weight:700; font-size:16.5px; color:#1e293b; margin-top:6px; }
+  .box .d { font-size:12.5px; color:#64748b; margin-top:5px; line-height:1.45; }
+  .arrow { display:flex; flex-direction:column; align-items:center; padding:0 10px; min-width:96px; }
+  .arrow .line { font-size:24px; color:#4f46e5; }
+  .arrow .lbl { font-size:11.5px; color:#475569; font-weight:600; text-align:center; margin-top:3px; }
+  .facts { margin-top:36px; display:flex; gap:22px; justify-content:center; }
+  .fact { background:#fff; border:1px solid #c7d2fe; border-radius:12px; padding:14px 22px; text-align:center; }
+  .fact b { display:block; font-size:20px; color:#4f46e5; }
+  .fact span { font-size:13px; color:#64748b; }
+</style>
+</head>
+<body>
+<div id="diagram">
+  <h1>Main User Workflow — borrowing a book</h1>
+  <div class="sub">The complete verified lifecycle, from browse to notification</div>
+
+  <div class="flow">
+    <div class="box"><div class="ic">📖</div><div class="t">1 · Browse catalog</div><div class="d">Search, sort, availability filter, pagination (GET /api/books)</div></div>
+    <div class="arrow"><div class="line">→</div><div class="lbl">picks a book</div></div>
+    <div class="box"><div class="ic">📕</div><div class="t">2 · Book details</div><div class="d">Availability, copies, ISBN (GET /api/books/{id})</div></div>
+    <div class="arrow"><div class="line">→</div><div class="lbl">1–30 days</div></div>
+    <div class="box"><div class="ic">📨</div><div class="t">3 · Borrow request</div><div class="d">POST /api/borrow → RabbitMQ queue → persisted as Pending</div></div>
+    <div class="arrow"><div class="line">→</div><div class="lbl">real-time push</div></div>
+    <div class="box"><div class="ic">🗂️</div><div class="t">4 · Admin review</div><div class="d">Approve (optional note) or deny (reason required)</div></div>
+    <div class="arrow"><div class="line">→</div><div class="lbl">notification</div></div>
+    <div class="box"><div class="ic">🔔</div><div class="t">5 · User informed</div><div class="d">Live SignalR push + persisted history + status badge</div></div>
+    <div class="arrow"><div class="line">→</div><div class="lbl">due date nears</div></div>
+    <div class="box"><div class="ic">⏰</div><div class="t">6 · Expiry reminders</div><div class="d">BorrowingExpirationJob alerts user &amp; admins</div></div>
+  </div>
+
+  <div class="facts">
+    <div class="fact"><b>1–30</b><span>days borrowing period<br>validated on both tiers</span></div>
+    <div class="fact"><b>5</b><span>request statuses<br>Pending → Approved/Denied → Returned/Expired</span></div>
+    <div class="fact"><b>2</b><span>notification channels<br>SignalR real-time + REST history</span></div>
+    <div class="fact"><b>100%</b><span>of decisions audited<br>reviewedBy / reviewedAt / denyReason</span></div>
+  </div>
+</div>
+</body>
+</html>

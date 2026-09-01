@@ -1,0 +1,128 @@
+// Design tokens: colors, spacing, typography, radii, shadows, z-index.
+// Variables only — no component-specific rules here.
+
+// ---- Palette: brand ----
+$color-primary-50: #eef2ff;
+$color-primary-100: #e0e7ff;
+$color-primary-200: #c7d2fe;
+$color-primary-400: #818cf8;
+$color-primary-500: #6366f1;
+$color-primary-600: #4f46e5;
+$color-primary-700: #4338ca;
+$color-primary-900: #312e81;
+
+// ---- Palette: neutral ----
+$color-neutral-0: #ffffff;
+$color-neutral-50: #f8fafc;
+$color-neutral-100: #f1f5f9;
+$color-neutral-200: #e2e8f0;
+$color-neutral-300: #cbd5e1;
+$color-neutral-400: #94a3b8;
+$color-neutral-500: #64748b;
+$color-neutral-600: #475569;
+$color-neutral-700: #334155;
+$color-neutral-800: #1e293b;
+$color-neutral-900: #0f172a;
+
+// ---- Semantic colors ----
+$color-danger: #dc2626;
+$color-danger-bg: #fef2f2;
+$color-info: #2563eb;
+$color-info-bg: #eff6ff;
+$color-success: #16a34a;
+$color-success-bg: #f0fdf4;
+$color-warning: #d97706;
+$color-warning-bg: #fffbeb;
+
+// ---- Status colors (borrowing request lifecycle) ----
+// -fg shades are darker accessible text companions of the base color.
+$status-pending: $color-warning;
+$status-pending-fg: #92400e;
+$status-pending-bg: $color-warning-bg;
+$status-approved: $color-success;
+$status-approved-fg: #15803d;
+$status-approved-bg: $color-success-bg;
+$status-denied: $color-danger;
+$status-denied-fg: #b91c1c;
+$status-denied-bg: $color-danger-bg;
+$status-returned: $color-info;
+$status-returned-fg: #1d4ed8;
+$status-returned-bg: $color-info-bg;
+$status-expired: $color-neutral-600;
+$status-expired-fg: $color-neutral-700;
+$status-expired-bg: $color-neutral-200;
+
+// ---- Typography ----
+$font-family-base:
+  system-ui,
+  -apple-system,
+  'Segoe UI',
+  Roboto,
+  'Helvetica Neue',
+  Arial,
+  sans-serif;
+$font-size-xs: 0.75rem;
+$font-size-sm: 0.875rem;
+$font-size-md: 1rem;
+$font-size-lg: 1.125rem;
+$font-size-xl: 1.25rem;
+$font-size-2xl: 1.5rem;
+$font-size-3xl: 1.875rem;
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+$font-weight-bold: 700;
+$line-height-tight: 1.25;
+$line-height-normal: 1.5;
+
+// ---- Spacing scale ----
+$space-1: 0.25rem;
+$space-2: 0.5rem;
+$space-3: 0.75rem;
+$space-4: 1rem;
+$space-5: 1.25rem;
+$space-6: 1.5rem;
+$space-8: 2rem;
+$space-10: 2.5rem;
+$space-12: 3rem;
+
+// ---- Radii ----
+$radius-sm: 0.375rem;
+$radius-md: 0.5rem;
+$radius-lg: 0.75rem;
+$radius-xl: 1rem;
+$radius-full: 9999px;
+
+// ---- Shadows / elevation ----
+$shadow-sm:
+  0 1px 2px rgb(15 23 42 / 0.06),
+  0 1px 3px rgb(15 23 42 / 0.08);
+$shadow-md:
+  0 4px 6px -1px rgb(15 23 42 / 0.08),
+  0 2px 4px -2px rgb(15 23 42 / 0.06);
+$shadow-lg:
+  0 12px 24px -6px rgb(15 23 42 / 0.15),
+  0 4px 12px -4px rgb(15 23 42 / 0.1);
+
+// ---- Layout ----
+$header-height: 4rem;
+$sidebar-width: 16rem;
+$content-max-width: 80rem;
+
+// ---- Motion ----
+$transition-fast: 150ms ease;
+$transition-normal: 250ms ease;
+
+// ---- Z-index ----
+$z-dropdown: 100;
+$z-overlay: 200;
+$z-modal: 300;
+
+// ---- Breakpoints ----
+$breakpoint-sm: 40em; // 640px
+$breakpoint-md: 48em; // 768px
+$breakpoint-lg: 64em; // 1024px
+$breakpoint-xl: 80em; // 1280px
+
+// ---- Focus ring color ----
+$focus-ring-color: $color-primary-500;

@@ -1,0 +1,52 @@
+@use './tokens' as *;
+
+$bp-map: (
+  sm: $breakpoint-sm,
+  md: $breakpoint-md,
+  lg: $breakpoint-lg,
+  xl: $breakpoint-xl,
+);
+
+@mixin breakpoint-up($bp) {
+  @media (min-width: map-get($bp-map, $bp)) {
+    @content;
+  }
+}
+
+@mixin breakpoint-down($bp) {
+  @media (max-width: #{map-get($bp-map, $bp) - 0.01em}) {
+    @content;
+  }
+}
+
+@mixin truncate-text($lines: 1) {
+  overflow: hidden;
+
+  @if $lines == 1 {
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  } @else {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    line-clamp: $lines;
+    -webkit-line-clamp: $lines;
+  }
+}
+
+@mixin focus-ring($offset: 2px) {
+  outline: 2px solid $focus-ring-color;
+  outline-offset: $offset;
+}
+
+@mixin card-surface {
+  background: $color-neutral-0;
+  border: 1px solid $color-neutral-200;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-sm;
+}
+
+@mixin status-badge-variant($fg, $bg) {
+  background: $bg;
+  border: 1px solid rgba($fg, 0.3);
+  color: $fg;
+}

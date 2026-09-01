@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',system-ui,sans-serif; }
+  body { background:#fff; }
+  #diagram { width:1600px; height:900px; background:linear-gradient(160deg,#f8fafc,#eef2ff); padding:48px; }
+  h1 { font-size:30px; color:#0f172a; margin-bottom:6px; }
+  .sub { color:#64748b; font-size:17px; margin-bottom:30px; }
+  .lanes { display:flex; gap:36px; }
+  .lane { flex:1; }
+  .lane h2 { font-size:15px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; margin-bottom:14px; }
+  .lane.req h2 { color:#4f46e5; }
+  .lane.res h2 { color:#15803d; }
+  .node { display:flex; align-items:center; gap:12px; margin-bottom:0; }
+  .b { background:#fff; border:1.5px solid #c7d2fe; border-radius:10px; padding:9px 14px; width:100%; }
+  .b b { font-size:14.5px; color:#1e293b; }
+  .b span { display:block; font-size:12px; color:#64748b; margin-top:1px; }
+  .b.g { border-color:#86efac; background:#f0fdf4; }
+  .arrow-down { text-align:center; color:#4f46e5; font-size:18px; padding:3px 0 3px 0; line-height:1; }
+  .bridge { position:absolute; }
+</style>
+</head>
+<body>
+<div id="diagram">
+  <h1>Frontend ⇄ Backend — tracing one real request</h1>
+  <div class="sub">What happens when a user submits a borrow request, and how the response travels back</div>
+
+  <div class="lanes">
+    <div class="lane req">
+      <h2>Request path ↓</h2>
+      <div class="node"><div class="b"><b>Book detail page — “Request to Borrow”</b><span>1–30 days reactive-form validation</span></div></div>
+      <div class="arrow-down">▼</div>
+      <div class="node"><div class="b"><b>RequestsApiService.submitBorrow()</b><span>HttpClient POST /api/borrow</span></div></div>
+      <div class="arrow-down">▼</div>
+      <div class="node"><div class="b"><b>Interceptors</b><span>attach Bearer JWT → normalize errors → (GET-only retry skipped for POST)</span></div></div>
+      <div class="arrow-down">▼</div>
+      <div class="node"><div class="b"><b>Dev proxy → BorrowingRequestsController</b><span>[Authorize(Roles="User")] · DTO validation 1–30</span></div></div>
+      <div class="arrow-down">▼</div>
+      <div class="node"><div class="b"><b>BorrowingService → BorrowRequestPublisher</b><span>enqueues BorrowRequestMessage to RabbitMQ “borrow-requests”</span></div></div>
+    </div>
+
+    <div class="lane res">
+      <h2>Processing &amp; response path ↑</h2>
+      <div class="node"><div class="b"><b>201 Created — BorrowingRequest returned</b><span>immediate acknowledgment to the UI</span></div></div>
+      <div class="arrow-down">▲</div>
+      <div class="node"><div class="b"><b>BorrowRequestConsumer (hosted service)</b><span>dequeues and persists the request as Pending</span></div></div>
+      <div class="arrow-down">▲</div>
+      <div class="node"><div class="b"><b>NotificationService → SignalR dispatcher</b><span>“notificationReceived” pushed to role-admins group</span></div></div>
+      <div class="arrow-down">▲</div>
+      <div class="node"><div class="b"><b>Admin reviews → approve / deny</b><span>PUT /api/requests/{id}/approve | /deny · deny reason required · 409 → refetch</span></div></div>
+      <div class="arrow-down">▲</div>
+      <div class="node"><div class="b g"><b>User notified in real time</b><span>inbox updates live; status visible in “My Requests” (Cairo timestamps)</span></div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

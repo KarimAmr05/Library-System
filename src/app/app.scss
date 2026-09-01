@@ -1,0 +1,35 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+}
+
+.shell {
+  display: flex;
+
+  &--bare {
+    display: block;
+    padding: 0;
+  }
+}
+
+.shell__backdrop {
+  position: fixed;
+  inset: 0;
+  inset-block-start: var(--header-height);
+  z-index: 30;
+  background: rgb(15 23 42 / 0.45);
+
+  @media (min-width: 64em) {
+    display: none;
+  }
+}
+
+.shell__content {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-6);
+  max-width: var(--content-max-width);
+
+  /* Centered content column next to the sidebar */
+  margin-inline: auto;
+}

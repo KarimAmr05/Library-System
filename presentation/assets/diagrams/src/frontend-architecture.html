@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',system-ui,sans-serif; }
+  body { background:#fff; }
+  #diagram { width:1600px; height:900px; background:linear-gradient(160deg,#f8fafc,#eef2ff); padding:48px; }
+  h1 { font-size:30px; color:#0f172a; margin-bottom:6px; }
+  .sub { color:#64748b; font-size:17px; margin-bottom:26px; }
+  .layers { display:flex; gap:26px; align-items:stretch; }
+  .layer { background:#fff; border:2px solid #c7d2fe; border-radius:14px; padding:20px; flex:1; box-shadow:0 2px 8px rgba(79,70,229,.08); }
+  .layer h2 { font-size:17px; color:#fff; background:#4f46e5; display:inline-block; padding:4px 14px; border-radius:8px; margin-bottom:14px; }
+  .layer.alt h2 { background:#334155; }
+  .item { border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px; margin-bottom:10px; background:#f8fafc; }
+  .item b { display:block; font-size:15px; color:#1e293b; }
+  .item span { font-size:13px; color:#64748b; line-height:1.4; display:block; margin-top:2px; }
+  .flow { margin-top:26px; background:#fff; border:2px dashed #a5b4fc; border-radius:14px; padding:18px 24px; }
+  .flow h2 { font-size:17px; color:#1e293b; margin-bottom:10px; }
+  .chain { display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:14.5px; color:#334155; font-weight:600; }
+  .chip { background:#eef2ff; border:1px solid #c7d2fe; border-radius:8px; padding:6px 12px; }
+  .sep { color:#4f46e5; font-weight:700; }
+</style>
+</head>
+<body>
+<div id="diagram">
+  <h1>Frontend Architecture — Angular 21</h1>
+  <div class="sub">Standalone components · zoneless change detection · Signals state · lazy-loaded features (verified folder structure)</div>
+
+  <div class="layers">
+    <div class="layer">
+      <h2>core/ — app-wide singletons</h2>
+      <div class="item"><b>auth/</b><span>AuthService (JWT decode + localStorage), AuthStore signals, functional guards, Bearer interceptor, login / forgot / reset pages, delete dialog</span></div>
+      <div class="item"><b>http/</b><span>APP_CONFIG token · error interceptor → unified AppError · retry interceptor (GET-only, exponential backoff)</span></div>
+      <div class="item"><b>realtime/</b><span>NotificationHubService (SignalR), reconnect handler → REST refetch, unread-badge store</span></div>
+      <div class="item"><b>layout/ + config/</b><span>AppHeader (unread badge), role-aware collapsible AppSidebar, APP_CONFIG token</span></div>
+    </div>
+    <div class="layer alt">
+      <h2>shared/ — reusable &amp; stateless</h2>
+      <div class="item"><b>styles/</b><span>SCSS design tokens + mixins (colors, spacing, focus-ring, breakpoints)</span></div>
+      <div class="item"><b>ui/</b><span>button · card · status-badge · empty-state · spinner · pagination</span></div>
+      <div class="item"><b>pipes / directives / validators / util</b><span>relative-time, cairo-time (Africa/Cairo), autofocus, borrowing-period (1–30), toQueryParams</span></div>
+    </div>
+    <div class="layer">
+      <h2>features/ — lazy-loaded domains</h2>
+      <div class="item"><b>books/</b><span>data (model · api · store) · pages (list, detail) · ui (card, search bar) — search, sort, availability filter, pagination</span></div>
+      <div class="item"><b>requests/</b><span>data (model · api · store) · pages (my requests, admin review) · ui (row, borrow form, deny dialog)</span></div>
+      <div class="item"><b>notifications/</b><span>data (model · api · store merging REST + SignalR) · pages (inbox) · ui (item)</span></div>
+    </div>
+  </div>
+
+  <div class="flow">
+    <h2>Pattern guarantees</h2>
+    <div class="chain">
+      <span class="chip">Smart pages</span><span class="sep">→</span>
+      <span class="chip">Stores (signal/computed)</span><span class="sep">→</span>
+      <span class="chip">Api services (HTTP only)</span><span class="sep">⇄</span>
+      <span class="chip">Interceptors: Bearer → AppError → GET retry</span><span class="sep">⇄</span>
+      <span class="chip">Guards: requireAuth / requireAdmin / requireUser / guestOnly</span><span class="sep">→</span>
+      <span class="chip">Lazy routes (loadChildren / loadComponent)</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

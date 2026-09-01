@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',system-ui,sans-serif; }
+  body { background:#fff; }
+  #diagram { width:1600px; height:900px; background:linear-gradient(160deg,#f8fafc,#eef2ff); padding:48px; }
+  h1 { font-size:30px; color:#0f172a; margin-bottom:6px; }
+  .sub { color:#64748b; font-size:17px; margin-bottom:28px; }
+  .cols { display:flex; gap:40px; }
+  .col { flex:1; }
+  .col h2 { font-size:15px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#4f46e5; margin-bottom:14px; }
+  .step { display:flex; gap:14px; margin-bottom:12px; align-items:flex-start; }
+  .n { width:30px; height:30px; border-radius:50%; background:#4f46e5; color:#fff; font-weight:700; font-size:15px;
+       display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .step .b { background:#fff; border:1px solid #c7d2fe; border-radius:10px; padding:9px 14px; flex:1; }
+  .step .b b { font-size:14.5px; color:#1e293b; }
+  .step .b span { display:block; font-size:12.5px; color:#64748b; margin-top:2px; line-height:1.4; }
+  .badge { display:inline-block; background:#f0fdf4; color:#15803d; border:1px solid #16a34a55; border-radius:6px;
+           font-size:11.5px; font-weight:700; padding:1px 8px; margin-left:6px; }
+</style>
+</head>
+<body>
+<div id="diagram">
+  <h1>Authentication &amp; Authorization — JWT end-to-end</h1>
+  <div class="sub">Actual implementation on both tiers · PBKDF2 password hashing · role claims · functional guards + Bearer interceptor</div>
+
+  <div class="cols">
+    <div class="col">
+      <h2>Sign-in (issuing the token)</h2>
+      <div class="step"><div class="n">1</div><div class="b"><b>User submits email + password</b><span>Angular reactive form → AuthService.login()</span></div></div>
+      <div class="step"><div class="n">2</div><div class="b"><b>POST /api/auth/login</b><span>no token required; anonymous attribute</span></div></div>
+      <div class="step"><div class="n">3</div><div class="b"><b>Backend verifies credentials</b><span>PBKDF2-SHA256 verify (100k iterations, per-user salt) · generic failure message (anti-enumeration) <span class="badge">401 on mismatch</span></span></div></div>
+      <div class="step"><div class="n">4</div><div class="b"><b>JwtService.GenerateToken</b><span>HMAC-SHA256 · claims: sub, email, nameidentifier, role · 120-minute expiry · issuer/audience validation</span></div></div>
+      <div class="step"><div class="n">5</div><div class="b"><b>Frontend stores the JWT</b><span>localStorage + decoded AuthStore signals (currentUser / role / isAuthenticated)</span></div></div>
+    </div>
+    <div class="col">
+      <h2>Calling a protected API</h2>
+      <div class="step"><div class="n">6</div><div class="b"><b>Route guard checks first</b><span>requireAuth / requireAdmin / requireUser — UX only, server remains authoritative</span></div></div>
+      <div class="step"><div class="n">7</div><div class="b"><b>authInterceptor attaches header</b><span>Authorization: Bearer &lt;JWT&gt; on every API request</span></div></div>
+      <div class="step"><div class="n">8</div><div class="b"><b>Backend validates the JWT</b><span>signature, issuer, audience, lifetime (30s clock skew)</span></div></div>
+      <div class="step"><div class="n">9</div><div class="b"><b>Role authorization</b><span>[Authorize(Roles="User")] → borrow, my-requests · [Authorize(Roles="Admin")] → review queue, approve/deny <span class="badge">403 when wrong role</span></span></div></div>
+      <div class="step"><div class="n">10</div><div class="b"><b>Real-time too</b><span>SignalR negotiates /hubs/notifications with access_token; server joins role-admins / user-{id} groups</span></div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

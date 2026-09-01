@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',system-ui,sans-serif; }
+  body { background:#fff; }
+  #diagram { width:1600px; height:900px; background:linear-gradient(160deg,#f8fafc,#eef2ff); padding:48px; position:relative; }
+  h1 { font-size:30px; color:#0f172a; margin-bottom:6px; }
+  .sub { color:#64748b; font-size:17px; margin-bottom:24px; }
+  .entities { display:flex; gap:26px; justify-content:center; align-items:flex-start; }
+  .entity { background:#fff; border:2px solid #c7d2fe; border-radius:12px; overflow:hidden; box-shadow:0 2px 10px rgba(79,70,229,.1); width:295px; }
+  .entity h2 { background:#4f46e5; color:#fff; font-size:16px; padding:8px 14px; }
+  .entity.admin h2 { background:#b45309; }
+  .entity.data h2 { background:#334155; }
+  table { width:100%; border-collapse:collapse; }
+  td { font-size:13px; color:#334155; padding:5px 12px; border-top:1px solid #f1f5f9; }
+  td.k { width:34px; font-weight:700; color:#4f46e5; }
+  td.f { color:#b45309; font-weight:600; }
+  .rel { position:absolute; font-size:12.5px; color:#475569; background:#fff; border:1px solid #cbd5e1; padding:4px 10px; border-radius:8px; font-weight:600; }
+  .lifecycle { margin-top:34px; background:#fff; border:2px dashed #a5b4fc; border-radius:14px; padding:16px 22px; }
+  .lifecycle h2 { font-size:16px; color:#1e293b; margin-bottom:10px; }
+  .states { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .st { padding:7px 16px; border-radius:999px; font-size:14px; font-weight:700; }
+  .pending { background:#fffbeb; color:#92400e; border:1px solid #f59e0b55; }
+  .approved { background:#f0fdf4; color:#15803d; border:1px solid #16a34a55; }
+  .denied { background:#fef2f2; color:#b91c1c; border:1px solid #dc262655; }
+  .returned { background:#eff6ff; color:#1d4ed8; border:1px solid #2563eb55; }
+  .expired { background:#e2e8f0; color:#334155; border:1px solid #64748b55; }
+  .ar { color:#4f46e5; font-weight:800; font-size:16px; }
+</style>
+</head>
+<body>
+<div id="diagram">
+  <h1>Database Design — SQL Server (EF Core code-first)</h1>
+  <div class="sub">5 entities · actual columns · verified FK behaviors · 2 migrations (InitialCreate, AddPasswordResetTokens)</div>
+
+  <div class="entities">
+    <div class="entity admin">
+      <h2>User</h2>
+      <table>
+        <tr><td class="k">PK</td><td>Id (Guid)</td></tr>
+        <tr><td></td><td>FullName (≤200)</td></tr>
+        <tr><td></td><td>Email — unique index (≤320)</td></tr>
+        <tr><td></td><td>PasswordHash (PBKDF2)</td></tr>
+        <tr><td></td><td>Role (User | Admin)</td></tr>
+        <tr><td></td><td>IsActive, CreatedAt</td></tr>
+      </table>
+    </div>
+
+    <div class="entity">
+      <h2>BorrowingRequest</h2>
+      <table>
+        <tr><td class="k">PK</td><td>Id (Guid)</td></tr>
+        <tr><td class="f">FK</td><td>BookId → Book (Restrict)</td></tr>
+        <tr><td class="f">FK</td><td>UserId → User (Restrict)</td></tr>
+        <tr><td></td><td>BookTitle (denormalized)</td></tr>
+        <tr><td></td><td>Status, BorrowingPeriodDays</td></tr>
+        <tr><td></td><td>RequestedAt, ReviewedAt?, ReviewedBy?, DenyReason?</td></tr>
+      </table>
+    </div>
+
+    <div class="entity data">
+      <h2>Book</h2>
+      <table>
+        <tr><td class="k">PK</td><td>Id (Guid)</td></tr>
+        <tr><td></td><td>Isbn?, Title, Author</td></tr>
+        <tr><td></td><td>Category?</td></tr>
+        <tr><td></td><td>IsAvailable</td></tr>
+        <tr><td></td><td>TotalCopies, AvailableCopies</td></tr>
+        <tr><td></td><td>CreatedAt, UpdatedAt</td></tr>
+      </table>
+    </div>
+
+    <div class="entity data">
+      <h2>Notification</h2>
+      <table>
+        <tr><td class="k">PK</td><td>Id (Guid)</td></tr>
+        <tr><td></td><td>RecipientUserId (indexed)</td></tr>
+        <tr><td></td><td>RecipientRole, Type</td></tr>
+        <tr><td></td><td>Title, Message</td></tr>
+        <tr><td></td><td>IsRead (composite index)</td></tr>
+        <tr><td></td><td>CreatedAt, RelatedRequestId?</td></tr>
+      </table>
+    </div>
+
+    <div class="entity data">
+      <h2>PasswordResetToken</h2>
+      <table>
+        <tr><td class="k">PK</td><td>Id (Guid)</td></tr>
+        <tr><td class="f">FK</td><td>UserId → User (Cascade)</td></tr>
+        <tr><td></td><td>TokenHash — unique (SHA-256)</td></tr>
+        <tr><td></td><td>ExpiresAtUtc, UsedAtUtc?</td></tr>
+        <tr><td></td><td>CreatedAtUtc</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="lifecycle">
+    <h2>BorrowingRequest status lifecycle</h2>
+    <div class="states">
+      <span class="st pending">Pending</span><span class="ar">→</span>
+      <span class="st approved">Approved</span><span class="ar">→</span>
+      <span class="st returned">Returned</span>
+      <span class="ar" style="margin-left:18px">|</span>
+      <span class="st denied" style="margin-left:18px">Denied</span>
+      <span class="ar">→</span>
+      <span class="st expired">Expired (background job)</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

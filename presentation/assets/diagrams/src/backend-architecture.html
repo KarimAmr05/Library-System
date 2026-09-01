@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',system-ui,sans-serif; }
+  body { background:#fff; }
+  #diagram { width:1600px; height:900px; background:linear-gradient(160deg,#f8fafc,#eef2ff); padding:48px; }
+  h1 { font-size:30px; color:#0f172a; margin-bottom:6px; }
+  .sub { color:#64748b; font-size:17px; margin-bottom:26px; }
+  .stack { display:flex; flex-direction:column; gap:0; max-width:1200px; }
+  .tier { display:flex; align-items:center; gap:22px; }
+  .tbox { background:#fff; border:2px solid #c7d2fe; border-radius:14px; padding:16px 22px; flex:1; box-shadow:0 2px 8px rgba(79,70,229,.08); }
+  .tbox h2 { font-size:18px; color:#1e293b; margin-bottom:8px; }
+  .tbox .chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .chip { background:#eef2ff; border:1px solid #c7d2fe; border-radius:8px; padding:5px 11px; font-size:13.5px; color:#334155; font-weight:600; }
+  .down { text-align:center; color:#4f46e5; font-size:22px; padding:2px 0; }
+  .down span { font-size:12.5px; color:#64748b; font-weight:600; margin-left:10px; }
+  .data { border-color:#94a3b8; }
+  .side { position:absolute; right:48px; top:150px; width:330px; }
+  .side .tbox { margin-bottom:16px; }
+  .side h3 { font-size:13px; font-weight:700; letter-spacing:.08em; color:#4f46e5; text-transform:uppercase; margin-bottom:10px; }
+  ul.list { list-style:none; }
+  ul.list li { font-size:13.5px; color:#475569; padding:3px 0 3px 18px; position:relative; line-height:1.4; }
+  ul.list li::before { content:'▸'; color:#4f46e5; position:absolute; left:0; }
+</style>
+</head>
+<body>
+<div id="diagram">
+  <h1>Backend Architecture — ASP.NET Core N-Tier</h1>
+  <div class="sub">Verified layering: Controllers → Business Services → Unit of Work → Generic Repositories → EF Core → SQL Server</div>
+
+  <div class="stack">
+    <div class="tier">
+      <div class="tbox">
+        <h2>API Layer — Controllers</h2>
+        <div class="chips">
+          <span class="chip">AuthController</span><span class="chip">BooksController</span><span class="chip">BorrowingRequestsController</span>
+          <span class="chip">AdminActionsController</span><span class="chip">NotificationsController</span>
+        </div>
+      </div>
+    </div>
+    <div class="down">▼ <span>DTOs in/out · [Authorize] role attributes · Result pattern</span></div>
+    <div class="tier">
+      <div class="tbox">
+        <h2>Business Layer</h2>
+        <div class="chips">
+          <span class="chip">AuthService</span><span class="chip">BookService</span><span class="chip">BorrowingService</span><span class="chip">NotificationService</span>
+          <span class="chip">DtoValidator (DataAnnotations)</span><span class="chip">JwtService</span><span class="chip">PasswordHasher (PBKDF2)</span>
+        </div>
+      </div>
+    </div>
+    <div class="down">▼ <span>interfaces (IAuthService, IBorrowingService, …) · Result / Error / ErrorCodes</span></div>
+    <div class="tier">
+      <div class="tbox">
+        <h2>Data Access — IUnitOfWork → IGenericRepository&lt;T&gt;</h2>
+        <div class="chips">
+          <span class="chip">Users</span><span class="chip">Books</span><span class="chip">BorrowingRequests</span><span class="chip">Notifications</span><span class="chip">PasswordResetTokens</span>
+        </div>
+      </div>
+    </div>
+    <div class="down">▼ <span>EF Core 10 (LibraryDBContext, code-first migrations)</span></div>
+    <div class="tier">
+      <div class="tbox data">
+        <h2>SQL Server — “LibrarySystem”</h2>
+        <div class="chips"><span class="chip">5 tables</span><span class="chip">unique + composite indexes</span><span class="chip">Restrict / Cascade FKs</span><span class="chip">seeded dev data</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="side">
+    <h3>Cross-cutting</h3>
+    <div class="tbox"><ul class="list">
+      <li>ExceptionHandlingMiddleware → uniform { code, message, details, traceId }</li>
+      <li>Swagger UI (Development)</li>
+      <li>Options binding + ValidateOnStart</li>
+    </ul></div>
+    <h3>Async &amp; real-time</h3>
+    <div class="tbox"><ul class="list">
+      <li>BorrowRequestPublisher → RabbitMQ queue</li>
+      <li>BorrowRequestConsumer (hosted) persists requests</li>
+      <li>NotificationsHub (SignalR groups)</li>
+      <li>BorrowingExpirationJob (hosted, reminders)</li>
+      <li>SmtpEmailSender (password resets)</li>
+    </ul></div>
+  </div>
+</div>
+</body>
+</html>

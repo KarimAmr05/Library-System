@@ -1,1 +1,234 @@
-/* You can add global styles to this file, and also import other style files */
+@use 'sass:math';
+@use './app/shared/styles/tokens' as *;
+@use './app/shared/styles/mixins' as *;
+
+// ---- Tokens mirrored to CSS custom properties ----
+// Component styles (incl. inline SCSS) reference these via var(--...).
+:root {
+  --color-primary-50: #{$color-primary-50};
+  --color-primary-100: #{$color-primary-100};
+  --color-primary-200: #{$color-primary-200};
+  --color-primary-400: #{$color-primary-400};
+  --color-primary-500: #{$color-primary-500};
+  --color-primary-600: #{$color-primary-600};
+  --color-primary-700: #{$color-primary-700};
+  --color-primary-900: #{$color-primary-900};
+
+  --color-neutral-0: #{$color-neutral-0};
+  --color-neutral-50: #{$color-neutral-50};
+  --color-neutral-100: #{$color-neutral-100};
+  --color-neutral-200: #{$color-neutral-200};
+  --color-neutral-300: #{$color-neutral-300};
+  --color-neutral-400: #{$color-neutral-400};
+  --color-neutral-500: #{$color-neutral-500};
+  --color-neutral-600: #{$color-neutral-600};
+  --color-neutral-700: #{$color-neutral-700};
+  --color-neutral-800: #{$color-neutral-800};
+  --color-neutral-900: #{$color-neutral-900};
+
+  --color-danger: #{$color-danger};
+  --color-danger-bg: #{$color-danger-bg};
+  --color-info: #{$color-info};
+  --color-info-bg: #{$color-info-bg};
+  --color-success: #{$color-success};
+  --color-success-bg: #{$color-success-bg};
+  --color-warning: #{$color-warning};
+  --color-warning-bg: #{$color-warning-bg};
+
+  --status-pending-fg: #{$status-pending-fg};
+  --status-pending-bg: #{$status-pending-bg};
+  --status-approved-fg: #{$status-approved-fg};
+  --status-approved-bg: #{$status-approved-bg};
+  --status-denied-fg: #{$status-denied-fg};
+  --status-denied-bg: #{$status-denied-bg};
+  --status-returned-fg: #{$status-returned-fg};
+  --status-returned-bg: #{$status-returned-bg};
+  --status-expired-fg: #{$status-expired-fg};
+  --status-expired-bg: #{$status-expired-bg};
+
+  --fs-xs: #{$font-size-xs};
+  --fs-sm: #{$font-size-sm};
+  --fs-md: #{$font-size-md};
+  --fs-lg: #{$font-size-lg};
+  --fs-xl: #{$font-size-xl};
+  --fs-2xl: #{$font-size-2xl};
+  --fs-3xl: #{$font-size-3xl};
+  --fw-normal: #{$font-weight-normal};
+  --fw-medium: #{$font-weight-medium};
+  --fw-semibold: #{$font-weight-semibold};
+  --fw-bold: #{$font-weight-bold};
+
+  --space-1: #{$space-1};
+  --space-2: #{$space-2};
+  --space-3: #{$space-3};
+  --space-4: #{$space-4};
+  --space-5: #{$space-5};
+  --space-6: #{$space-6};
+  --space-8: #{$space-8};
+  --space-10: #{$space-10};
+  --space-12: #{$space-12};
+
+  --radius-sm: #{$radius-sm};
+  --radius-md: #{$radius-md};
+  --radius-lg: #{$radius-lg};
+  --radius-xl: #{$radius-xl};
+  --radius-full: #{$radius-full};
+
+  --shadow-sm: #{$shadow-sm};
+  --shadow-md: #{$shadow-md};
+  --shadow-lg: #{$shadow-lg};
+
+  --transition-fast: #{$transition-fast};
+  --transition-normal: #{$transition-normal};
+
+  --header-height: #{$header-height};
+  --sidebar-width: #{$sidebar-width};
+}
+
+// ---- Global reset ----
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-padding-top: calc(var(--header-height) + #{$space-4});
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: $font-family-base;
+  font-size: $font-size-md;
+  font-weight: $font-weight-normal;
+  line-height: $line-height-normal;
+  color: $color-neutral-800;
+  background: $color-neutral-100;
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+// All interactive elements: remove double-tap zoom delay on touch devices.
+button,
+a,
+input,
+select,
+textarea,
+label[for] {
+  touch-action: manipulation;
+}
+
+// Numeric UI (pagination, counts, timestamps) aligns digits in columns.
+.pager,
+.row__meta,
+.detail__facts,
+.login__hint {
+  font-variant-numeric: tabular-nums;
+}
+
+img,
+svg,
+video {
+  display: block;
+  max-width: 100%;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  background: none;
+  border: none;
+}
+
+a {
+  color: $color-primary-600;
+  text-decoration: none;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-weight: $font-weight-semibold;
+  line-height: $line-height-tight;
+  color: $color-neutral-900;
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+:focus-visible {
+  @include focus-ring;
+}
+
+::selection {
+  background: $color-primary-200;
+}
+
+// ---- Accessibility helpers ----
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  top: -$space-12;
+  left: $space-4;
+  z-index: $z-modal;
+  padding: $space-2 $space-4;
+  background: $color-primary-600;
+  color: $color-neutral-0;
+  border-radius: $radius-md;
+  transition: top $transition-fast;
+
+  &:focus {
+    top: $space-4;
+  }
+}
+
+// ---- Motion preferences ----
+// Honor prefers-reduced-motion: strip decorative loops and keep only
+// essential, instant state feedback.
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

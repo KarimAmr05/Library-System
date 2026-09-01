@@ -42,3 +42,7 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Temporary backend copy (owned by the backend agent; never commit from here)
+Library-System-API-Temporary/
+diag-*.png

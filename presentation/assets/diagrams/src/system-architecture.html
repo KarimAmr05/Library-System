@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',system-ui,sans-serif; }
+  body { background:#fff; }
+  #diagram { width:1600px; height:900px; background:linear-gradient(160deg,#f8fafc,#eef2ff); padding:48px; position:relative; }
+  h1 { font-size:30px; color:#0f172a; margin-bottom:6px; }
+  .sub { color:#64748b; font-size:17px; margin-bottom:28px; }
+  .row { display:flex; align-items:stretch; justify-content:center; gap:0; }
+  .box { background:#fff; border:2px solid #c7d2fe; border-radius:14px; padding:18px 22px; text-align:center;
+         box-shadow:0 2px 8px rgba(79,70,229,.08); display:flex; flex-direction:column; justify-content:center; }
+  .box .t { font-weight:700; font-size:20px; color:#1e293b; }
+  .box .d { font-size:14px; color:#64748b; margin-top:6px; line-height:1.45; }
+  .accent { border-color:#4f46e5; background:#eef2ff; }
+  .data  { border-color:#94a3b8; }
+  .arrow { display:flex; flex-direction:column; justify-content:center; align-items:center; padding:0 14px; min-width:110px; }
+  .arrow .line { font-size:26px; color:#4f46e5; line-height:1; }
+  .arrow .lbl { font-size:12.5px; color:#475569; font-weight:600; margin-top:4px; text-align:center; }
+  .tier { font-size:13px; font-weight:700; letter-spacing:.08em; color:#4f46e5; text-transform:uppercase; margin-bottom:8px; text-align:left; }
+  .cols { display:flex; gap:36px; margin-top:30px; justify-content:center; }
+  .col { flex:1; max-width:700px; }
+  .colbox { background:#fff; border:2px solid #c7d2fe; border-radius:14px; padding:20px 24px; box-shadow:0 2px 8px rgba(79,70,229,.08); }
+  .colbox h2 { font-size:18px; color:#1e293b; margin-bottom:10px; }
+  .colbox ul { list-style:none; }
+  .colbox li { font-size:14.5px; color:#475569; padding:4px 0; padding-left:20px; position:relative; }
+  .colbox li::before { content:'▸'; color:#4f46e5; position:absolute; left:0; }
+</style>
+</head>
+<body>
+<div id="diagram">
+  <h1>Library System — Overall Architecture</h1>
+  <div class="sub">One integrated system: Angular SPA ⇄ .NET Web API ⇄ SQL Server, with asynchronous processing and real-time notifications</div>
+
+  <div class="row">
+    <div class="box" style="width:190px"><div class="t">👤 User</div><div class="d">Browser<br>desktop · tablet · mobile</div></div>
+    <div class="arrow"><div class="line">⇄</div><div class="lbl">HTTPS<br>(dev proxy)</div></div>
+    <div class="box accent" style="width:280px"><div class="t">Angular 21 SPA</div><div class="d">Standalone components · Signals stores<br>Guards · HTTP interceptors</div></div>
+    <div class="arrow"><div class="line">⇄</div><div class="lbl">REST /api<br>JSON + JWT</div></div>
+    <div class="box accent" style="width:300px"><div class="t">.NET 10 Web API</div><div class="d">Controllers · Services<br>Validators · Result pattern<br>JWT + role authorization</div></div>
+    <div class="arrow"><div class="line">⇄</div><div class="lbl">EF Core<br>LINQ</div></div>
+    <div class="box data" style="width:210px"><div class="t">SQL Server</div><div class="d">LibrarySystem DB<br>5 tables · EF migrations</div></div>
+  </div>
+
+  <div style="display:flex; justify-content:center; margin-top:18px;">
+    <div class="arrow" style="min-width:300px"><div class="line">⇅</div><div class="lbl">SignalR — real-time “notificationReceived” pushes<br>(/hubs/notifications, JWT via access_token)</div></div>
+  </div>
+
+  <div class="cols">
+    <div class="col">
+      <div class="tier">Asynchronous processing</div>
+      <div class="colbox">
+        <h2>🐇 RabbitMQ — queue “borrow-requests”</h2>
+        <ul>
+          <li>POST /api/borrow publishes a BorrowRequestMessage</li>
+          <li>BorrowRequestConsumer persists requests in the background</li>
+          <li>Decouples submission from processing</li>
+        </ul>
+      </div>
+    </div>
+    <div class="col">
+      <div class="tier">Background &amp; real-time services</div>
+      <div class="colbox">
+        <h2>⏰ BorrowingExpirationJob · 📣 NotificationsHub</h2>
+        <ul>
+          <li>Hosted job reminds users &amp; admins before due dates</li>
+          <li>SignalR groups: “role-admins” and “user-{id}”</li>
+          <li>SMTP email sender for password resets</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
