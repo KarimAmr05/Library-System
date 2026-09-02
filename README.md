@@ -58,16 +58,7 @@ npm run watch  # development watch build
 npm test       # runs the unit tests
 ```
 
-## Application routes
 
-- `/login`
-- `/forgot-password`
-- `/reset-password`
-- `/books`
-- `/requests`
-- `/notifications`
-
-The app redirects the root path to `/books` and falls back to `/books` for unmatched routes.
 
 ## Project notes
 
