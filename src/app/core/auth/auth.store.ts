@@ -1,7 +1,8 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { Observable, map } from 'rxjs';
+import { Observable, map, throwError } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
-import { AuthUser, UserRole } from './auth.models';
+import { AuthUser, LoginResponse, UserRole } from './auth.models';
 import { AuthService } from './auth.service';
 
 /**
@@ -36,10 +37,31 @@ export class AuthStore {
     return this.establishSession(this.authService.register(fullName, email, password));
   }
 
+  /**
+   * Silently renews the session using the stored refresh token (rotation).
+   * Concurrent callers share one in-flight request; failures clear the session.
+   */
+  refreshSession(): Observable<AuthUser> {
+    return this.establishSession(this.authService.refreshToken()).pipe(
+      catchError((error: unknown) => {
+        this.logout();
+        return throwError(() => error);
+      }),
+    );
+  }
+
   private establishSession(source: Observable<{ token: string }>) {
     return source.pipe(
       map((response) => {
-        this.authService.storeToken(response.token);
+        // AuthService already persisted both tokens of a refreshed pair;
+        // persist here for login/register responses (idempotent).
+        const full = response as LoginResponse;
+        if (full.refreshToken) {
+          this.authService.storeSession(full);
+        } else {
+          this.authService.storeToken(response.token);
+        }
+
         // Trust the freshly-decoded token over the response body for identity.
         const user = this.authService.resolveUser();
 
@@ -53,7 +75,9 @@ export class AuthStore {
     );
   }
 
+  /** Clears the local session and revokes the refresh token on the backend. */
   logout(): void {
+    this.authService.revokeRefreshToken();
     this.authService.logout();
     this._currentUser.set(null);
   }

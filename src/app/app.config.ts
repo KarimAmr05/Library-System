@@ -10,10 +10,9 @@ import { routes } from './app.routes';
 import { APP_CONFIG } from './core/config/app-config.token';
 import { environment } from '../environments/environment';
 import { authInterceptor } from './core/auth/auth.interceptor';
+import { authRefreshInterceptor } from './core/auth/auth-refresh.interceptor';
 import { apiErrorInterceptor } from './core/http/api-error.interceptor';
 import { retryInterceptor } from './core/http/retry.interceptor';
-import { gatewayInterceptor } from './core/http/gateway.interceptor';
-import { oauthTokenInterceptor } from './core/http/oauth-token.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -24,13 +23,12 @@ export const appConfig: ApplicationConfig = {
       withComponentInputBinding(),
       withInMemoryScrolling({ scrollPositionRestoration: 'top' }),
     ),
-    // Order matters: gateway header → auth header → gateway OAuth2 token →
+    // Order matters: auth header → silent 401-refresh retry →
     // error normalization → GET-only retry.
     provideHttpClient(
       withInterceptors([
-        gatewayInterceptor,
         authInterceptor,
-        oauthTokenInterceptor,
+        authRefreshInterceptor,
         apiErrorInterceptor,
         retryInterceptor,
       ]),

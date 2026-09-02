@@ -293,8 +293,9 @@ export class AppSidebarComponent {
   protected links() {
     if (this.authStore.isAdmin()) {
       return [
-        { path: '/books', label: 'Browse Catalog', icon: '📖' },
-        { path: '/requests', label: 'Review Requests', icon: '🗂️' },
+        { path: '/books', label: 'Browse Catalog', icon: '📚' },
+        { path: '/requests', label: 'Review Requests', icon: '📋' },
+        { path: '/admin/users', label: 'Manage Users', icon: '👥' },
         { path: '/notifications', label: 'Notifications', icon: '🔔' }
       ];
     }

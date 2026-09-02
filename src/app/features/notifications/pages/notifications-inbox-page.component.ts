@@ -215,8 +215,8 @@ export class NotificationsInboxPageComponent {
   protected readonly live = () => this.hub.isConnected();
 
   ngOnInit(): void {
-    // Real-time merge + reconnect refetch are wired once per inbox instance.
-    this.store.connectRealtime();
+    // Real-time merge is wired in the store constructor (route-scoped);
+    // the header badge is maintained globally by NotificationsStreamService.
     this.store.refreshBadgeCount();
 
     // Deep-link the read filter (?filter=unread).

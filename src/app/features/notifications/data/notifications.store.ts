@@ -1,4 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { EMPTY } from 'rxjs';
 import { catchError, finalize } from 'rxjs/operators';
 
@@ -59,34 +60,35 @@ export class NotificationsStore {
   );
   readonly unreadOnPage = computed(() => this._items().filter((n) => !n.isRead).length);
 
-  /** Wires real-time integration; called once when the inbox initializes. */
-  connectRealtime(): void {
-    // 1) Live pushes merge into local state and bump the badge.
-    this.hub.notificationReceived$.subscribe((pushed) => {
-      const incoming: Notification = {
-        id: pushed.id,
-        recipientUserId: pushed.recipientUserId,
-        recipientRole: (pushed.recipientRole === 'Admin'
-          ? 'Admin'
-          : 'User') as Notification['recipientRole'],
-        type: pushed.type as Notification['type'],
-        title: pushed.title,
-        message: pushed.message,
-        isRead: pushed.isRead,
-        createdAt: pushed.createdAt,
-      };
+  constructor() {
+    // 1) Live pushes merge into the local list. The unread BADGE is owned by
+    //    the global NotificationsStreamService — incrementing here as well
+    //    would double-count whenever the inbox is open.
+    this.hub.notificationReceived$
+      .pipe(takeUntilDestroyed())
+      .subscribe((pushed) => {
+        const incoming: Notification = {
+          id: pushed.id,
+          recipientUserId: pushed.recipientUserId,
+          recipientRole: (pushed.recipientRole === 'Admin'
+            ? 'Admin'
+            : 'User') as Notification['recipientRole'],
+          type: pushed.type as Notification['type'],
+          title: pushed.title,
+          message: pushed.message,
+          isRead: pushed.isRead,
+          createdAt: pushed.createdAt,
+        };
 
-      if (!this.isRelevantToCurrentScope(incoming)) {
-        return;
-      }
+        if (!this.isRelevantToCurrentScope(incoming)) {
+          return;
+        }
 
-      if (this._page() === 1 && !this.filters.isRead) {
-        // Newest-first inbox: prepend live items on the first page only.
-        this._items.update((items) => [incoming, ...items]);
-      }
-
-      this.badge.increment();
-    });
+        if (this._page() === 1 && !this.filters.isRead) {
+          // Newest-first inbox: prepend live items on the first page only.
+          this._items.update((items) => [incoming, ...items]);
+        }
+      });
 
     // 2) After every hub reconnect, refetch persisted history to recover gaps.
     this.reconnectHandler.registerOnSync(() => {

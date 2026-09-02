@@ -14,7 +14,9 @@ import { AppHeaderComponent } from './core/layout/app-header.component';
 import { AppSidebarComponent } from './core/layout/app-sidebar.component';
 import { DeleteAccountDialogComponent } from './core/auth/delete-account-dialog.component';
 import { AuthStore } from './core/auth/auth.store';
+import { AuthService } from './core/auth/auth.service';
 import { NotificationHubService } from './core/realtime/notification-hub.service';
+import { NotificationsStreamService } from './core/realtime/notifications-stream.service';
 
 /** Application shell: header + role-aware sidebar + routed content. */
 @Component({
@@ -27,7 +29,9 @@ import { NotificationHubService } from './core/realtime/notification-hub.service
 export class App {
   /** Exposed for the delete-account dialog binding in the template. */
   readonly authStore = inject(AuthStore);
+  private readonly authService = inject(AuthService);
   private readonly hub = inject(NotificationHubService);
+  private readonly notificationsStream = inject(NotificationsStreamService);
   private readonly router = inject(Router);
 
   /** Sidebar drawer visibility (mobile only). */
@@ -67,10 +71,20 @@ export class App {
     // reflect the URL the app booted on, before any NavigationEnd arrives.
     this.isAuthRoute.set(App.isAuthUrl(this.router.url));
 
+    // Silent session restore: an expired access token with a valid refresh
+    // token must not force a manual re-login on reload.
+    if (!this.authStore.isAuthenticated() && this.authService.hasRefreshToken()) {
+      this.authStore.refreshSession().subscribe({ error: () => undefined });
+    }
+
     // Connect/disconnect the notifications hub with the session lifecycle.
+    // The stream service keeps the unread badge live application-wide.
     effect((onCleanup) => {
       if (this.authStore.isAuthenticated()) {
         void this.hub.start();
+        this.notificationsStream.startSession();
+      } else {
+        this.notificationsStream.reset();
       }
 
       onCleanup(() => {

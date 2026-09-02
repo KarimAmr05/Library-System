@@ -1,34 +1,28 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, shareReplay, throwError } from 'rxjs';
+import { finalize, map } from 'rxjs/operators';
 
 import { APP_CONFIG } from '../config/app-config.token';
 import { AppError } from '../http/app-error';
 import { AuthUser, LoginResponse, UserRole } from './auth.models';
 
 const TOKEN_STORAGE_KEY = 'library-system.jwt';
+const REFRESH_TOKEN_STORAGE_KEY = 'library-system.refresh-token';
 
 /**
- * Error payload the gateway delivers with an HTTP 200 status: WSO2 does not
- * always preserve backend status codes, so auth failures can arrive "OK".
+ * Endpoints that must never trigger (or be wrapped by) the refresh flow —
+ * they either issue tokens themselves or cannot be retried meaningfully.
  */
-interface GatewayErrorPayload {
-  readonly code?: string;
-  readonly message?: string;
-  readonly description?: string;
-  readonly status?: number;
-  readonly traceId?: string;
-}
-
-function isGatewayErrorPayload(value: unknown): value is GatewayErrorPayload {
-  const record = value as Record<string, unknown> | null;
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof record?.['token'] !== 'string' &&
-    typeof record?.['message'] === 'string'
-  );
-}
+const REFRESH_EXEMPT_PATHS = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/create-admin',
+  '/auth/refresh-token',
+  '/auth/revoke-refresh-token',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+];
 
 /** Decoded JWT claims relevant to identity. */
 interface JwtClaims {
@@ -50,13 +44,14 @@ export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly config = inject(APP_CONFIG);
 
+  /** Shared in-flight refresh call so concurrent 401s rotate the token once. */
+  private refreshInFlight$: Observable<LoginResponse> | null = null;
+
   login(email: string, password: string): Observable<LoginResponse> {
-    return this.assertSession(
-      this.http.post<LoginResponse>(`${this.config.apiUrl}/auth/login`, {
-        email,
-        password,
-      }),
-    );
+    return this.http.post<LoginResponse>(`${this.config.apiUrl}/auth/login`, {
+      email,
+      password,
+    });
   }
 
   /**
@@ -64,13 +59,11 @@ export class AuthService {
    * payload, so callers can sign the user in immediately after signup.
    */
   register(fullName: string, email: string, password: string): Observable<LoginResponse> {
-    return this.assertSession(
-      this.http.post<LoginResponse>(`${this.config.apiUrl}/auth/register`, {
-        fullName,
-        email,
-        password,
-      }),
-    );
+    return this.http.post<LoginResponse>(`${this.config.apiUrl}/auth/register`, {
+      fullName,
+      email,
+      password,
+    });
   }
 
   /**
@@ -103,55 +96,58 @@ export class AuthService {
     });
   }
 
-  /**
-   * Detects gateway-level auth failures delivered as HTTP 200 (WSO2 swallows
-   * backend status codes) and rethrows them as AppError so the existing
-   * error handling — status mapping, login-page messaging — stays intact.
-   */
-  private assertSession(source: Observable<LoginResponse>): Observable<LoginResponse> {
-    return new Observable<LoginResponse>((subscriber) => {
-      const subscription = source.subscribe({
-        next: (response) => {
-          if (typeof response?.token === 'string' && response.token.length > 0) {
-            subscriber.next(response);
-            subscriber.complete();
-            return;
-          }
-
-          subscriber.error(this.toAppError(response));
-        },
-        error: (err) => subscriber.error(err),
-      });
-
-      return () => subscription.unsubscribe();
-    });
+  /** True when the request targets an endpoint that must not trigger refresh. */
+  isRefreshExempt(url: string): boolean {
+    return REFRESH_EXEMPT_PATHS.some((path) => url.includes(path));
   }
 
-  /** Builds an AppError from a gateway error payload (or a missing token). */
-  private toAppError(payload: unknown): AppError {
-    if (isGatewayErrorPayload(payload)) {
-      const message = payload.message || payload.description || '';
-      return new AppError({
-        status: typeof payload.status === 'number' ? payload.status : 401,
-        code: payload.code ?? 'UNAUTHORIZED',
-        message,
-        traceId: payload.traceId,
-      });
+  /**
+   * Exchanges the stored refresh token for a fresh token pair (rotation).
+   * Concurrent callers share one in-flight request so the single-use token
+   * cannot be consumed twice.
+   */
+  refreshToken(): Observable<LoginResponse> {
+    const stored = this.getRefreshToken();
+    if (!stored) {
+      return throwError(this.sessionExpiredError());
     }
 
-    return new AppError({
-      status: 500,
-      code: 'UNKNOWN_ERROR',
-      message: 'Authentication failed. Please try again.',
-    });
+    this.refreshInFlight$ ??= this.http
+      .post<LoginResponse>(`${this.config.apiUrl}/auth/refresh-token`, {
+        refreshToken: stored,
+      })
+      .pipe(
+        map((response) => {
+          this.storeSession(response);
+          return response;
+        }),
+        finalize(() => (this.refreshInFlight$ = null)),
+        shareReplay(1),
+      );
+
+    return this.refreshInFlight$;
+  }
+
+  /** Revokes the stored refresh token on the backend (logout). Fire-and-forget. */
+  revokeRefreshToken(): void {
+    const stored = this.getRefreshToken();
+    if (!stored) {
+      return;
+    }
+
+    this.http
+      .post(`${this.config.apiUrl}/auth/revoke-refresh-token`, { refreshToken: stored })
+      .subscribe({ error: () => undefined }); // best-effort; tokens are cleared regardless
   }
 
   logout(): void {
     try {
       localStorage.removeItem(TOKEN_STORAGE_KEY);
+      localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
     } catch {
       // storage unavailable — nothing to clear
     }
+    this.refreshInFlight$ = null;
   }
 
   getToken(): string | null {
@@ -162,7 +158,20 @@ export class AuthService {
     }
   }
 
-  /** Persists the issued token. Expiry is re-checked on every read via decode. */
+  /** True when a refresh token is available for silent session renewal. */
+  hasRefreshToken(): boolean {
+    return this.getRefreshToken() !== null;
+  }
+
+  getRefreshToken(): string | null {
+    try {
+      return localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
+    } catch {
+      return null;
+    }
+  }
+
+  /** Persists the issued access token. Expiry is re-checked on every read via decode. */
   storeToken(token: string): void {
     try {
       localStorage.setItem(TOKEN_STORAGE_KEY, token);
@@ -171,9 +180,32 @@ export class AuthService {
     }
   }
 
+  /** Persists both tokens of an issued pair (login, register, refresh). */
+  storeSession(response: LoginResponse): void {
+    this.storeToken(response.token);
+    try {
+      localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, response.refreshToken);
+    } catch {
+      // storage unavailable — session works until page reload
+    }
+  }
+
+  /**
+   * Builds the normalized error used when a session cannot be renewed.
+   */
+  private sessionExpiredError(): AppError {
+    return new AppError({
+      status: 401,
+      code: 'UNAUTHORIZED',
+      message: 'Your session has expired. Please sign in again.',
+    });
+  }
+
   /**
    * Decodes the stored token into an AuthUser.
-   * Returns null for missing/expired/malformed tokens.
+   * Returns null for missing/expired/malformed tokens. When the access token
+   * is expired but a refresh token exists, the tokens are kept so the silent
+   * refresh flow can restore the session.
    */
   resolveUser(): AuthUser | null {
     const token = this.getToken();
@@ -183,8 +215,8 @@ export class AuthService {
 
     const claims = this.decodeToken(token);
     if (!claims || this.isExpired(claims)) {
-      if (claims) {
-        this.logout(); // expired token — clean up
+      if (claims && !this.hasRefreshToken()) {
+        this.logout(); // expired token with no way to renew — clean up
       }
       return null;
     }

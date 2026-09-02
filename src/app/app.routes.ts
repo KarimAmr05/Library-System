@@ -41,6 +41,10 @@ export const routes: Routes = [
       import('./features/requests/requests.routes').then((m) => m.REQUESTS_ROUTES),
   },
   {
+    path: 'admin',
+    loadChildren: () => import('./features/users/users.routes').then((m) => m.USERS_ROUTES),
+  },
+  {
     path: 'notifications',
     loadChildren: () =>
       import('./features/notifications/notifications.routes').then((m) => m.NOTIFICATIONS_ROUTES),

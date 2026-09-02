@@ -10,6 +10,8 @@ export interface AuthUser {
 export interface LoginResponse {
   token: string;
   expiresAtUtc: string;
+  refreshToken: string;
+  refreshTokenExpiresAtUtc: string;
   userId: string;
   email: string;
   role: UserRole;

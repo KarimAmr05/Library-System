@@ -7,11 +7,9 @@ import {
   LogLevel,
 } from '@microsoft/signalr';
 import { Observable, Subject } from 'rxjs';
-import { firstValueFrom } from 'rxjs';
 
 import { APP_CONFIG } from '../config/app-config.token';
 import { AuthService } from '../auth/auth.service';
-import { GatewayTokenService } from '../http/gateway-token.service';
 
 /** Payload pushed by the backend hub's `notificationReceived` event. */
 export interface PushedNotification {
@@ -28,12 +26,15 @@ export interface PushedNotification {
 /**
  * Owns the SignalR connection to /hubs/notifications.
  * Features subscribe to events; no SignalR details leak outside Core.
+ *
+ * Authentication uses the `access_token` query-string handshake via
+ * accessTokenFactory (the backend JwtBearer events read it for hub paths),
+ * so the connection re-reads the current token on every (re)connect.
  */
 @Injectable({ providedIn: 'root' })
 export class NotificationHubService {
   private readonly config = inject(APP_CONFIG);
   private readonly authService = inject(AuthService);
-  private readonly gatewayTokens = inject(GatewayTokenService);
 
   private connection: HubConnection | null = null;
 
@@ -55,18 +56,25 @@ export class NotificationHubService {
   /** Emits once after every successful automatic reconnect. */
   readonly reconnected$: Observable<void> = this.reconnectedSubject.asObservable();
 
-  /** Session-scoped reachability verdict for the hub endpoint (one probe max). */
+  /** Reachability verdict for the hub endpoint (TTL-cached). */
   private availability$: Promise<boolean> | null = null;
+  private availabilityCheckedAtMs = 0;
 
   /**
-   * One-shot probe: is the hub routed by the gateway at all? The WSO2 API
-   * only maps /api/** resources, so /hubs/** answers 404 — and a plain POST
-   * that the browser cannot read (CORS-blocked) also means unreachable.
-   * Cached for the session so neither retries nor re-logins re-spam the
-   * gateway with doomed negotiate requests.
+   * Probe: does the hub respond at all (e.g. backend running, proxy routed)?
+   * The verdict is cached briefly (5 minutes) so doomed negotiate requests
+   * are not spammed, but a backend coming back up is still detected on the
+   * next start attempt instead of being dead for the whole session.
    */
   private checkReachable(): Promise<boolean> {
-    this.availability$ ??= (async () => {
+    const TTL_MS = 5 * 60 * 1000;
+    const now = Date.now();
+    if (this.availability$ && now - this.availabilityCheckedAtMs < TTL_MS) {
+      return this.availability$;
+    }
+
+    this.availabilityCheckedAtMs = now;
+    this.availability$ = (async () => {
       try {
         const response = await fetch(`${this.config.hubUrl}/negotiate?negotiateVersion=1`, {
           method: 'POST',
@@ -95,7 +103,7 @@ export class NotificationHubService {
     }
 
     if (!(await this.checkReachable())) {
-      return; // gateway does not route the hub — REST polling remains the fallback
+      return; // hub endpoint unreachable — REST remains the fallback
     }
 
     const token = this.authService.getToken();
@@ -103,23 +111,9 @@ export class NotificationHubService {
       return; // nothing to authenticate with
     }
 
-    // Mirror the HTTP interceptor scheme: WSO2 token in `Authorization`,
-    // backend JWT in `user` (plus the access_token query param handshake).
-    // Non-fatal if the gateway token cannot be fetched — REST stays the
-    // fallback source of truth.
-    const gatewayToken = await firstValueFrom(this.gatewayTokens.getAccessToken()).catch(
-      () => null,
-    );
-
     const options: IHttpConnectionOptions = {
       accessTokenFactory: () => this.authService.getToken() ?? '',
       skipNegotiation: false,
-      headers: {
-        // Required by the free-tier ngrok gateway (see gateway.interceptor.ts).
-        'ngrok-skip-browser-warning': 'true',
-        ...(gatewayToken ? { Authorization: `Bearer ${gatewayToken}` } : {}),
-        ...(token ? { user: `Bearer ${token}` } : {}),
-      },
       logMessageContent: false,
     };
 
